@@ -1,0 +1,26 @@
+# Example basic docker-compose.yml, should be adaptable to other tools if needed.
+# Be sure to edit custom.env!
+
+services:
+  freeradius:
+    container_name: fr-proxy-example
+    build:
+      context: .
+      dockerfile: Dockerfile
+    hostname: fr-proxy-example
+    ports:
+      # If you are hosting multiple containers, change the default below to the next available UDP
+      # port that you aren't already using. A reverse proxy like traefik can also solve this for you
+      # and let you stick with 1812. Anything in 49152-65535 is generally safe since that's the
+      # "private" / dynamic high port range.
+      # We specify 0.0.0.0 to prevent using IPv6, but you don't have to.
+      - "0.0.0.0:50000:1812/udp"
+    environment:
+      TZ: 'America/Los_Angeles'
+    # You must modify the values in custom.env; see README for more info.
+    env_file: ./custom.env
+    volumes:
+      # Persist this if you aren't shipping syslogs to another host (syslog is best):
+      - './vols/log/:/var/log/freeradius/'
+    # Use "no" to avoid a boot loop if you're still testing, otherwise use "unless-stopped".
+    restart: "no"
