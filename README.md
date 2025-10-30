@@ -1,5 +1,5 @@
 # eSO-hostable containerized FreeRADIUS filtering proxy for SP-only eduroam deployments
-This is a containerized eduroam filtering proxy using FreeRADIUS, pre-configured and tailored for SP-only deployments in the US. Host it at an eSO and have a constituent point their APs/controller at this instead of directly at the eduroam national proxies. This can also be hosted directly the constituent's own network if they have spare computing power via a tiny PC, SOHO-grade NAS appliance, AP/router combo, etc.
+This is a containerized eduroam filtering proxy using FreeRADIUS, pre-configured and tailored for SP-only deployments in the US. Host it at an eSO and have a constituent point their APs/controller at this instead of directly at the eduroam national proxies. This can also be hosted directly on the constituent's own network if they have spare computing power via a tiny PC, SOHO-grade NAS appliance, AP/router combo, etc.
 
 The idea is to enable not-so-fully-featured wireless gear to play nicely with the eduroam-US service even if the AP/controller can't make simple policy decisions like dropping realm-less auth requests, which will always fail when they hit the national proxies. Some wireless gear will include information like the AP make/model or physical location (e.g. BldgA-2F-WC) in their RADIUS requests, so we also filter out these common leaky attributes.
 
@@ -58,14 +58,14 @@ They each host identical containers for their 4 constituents. No replication or 
 | Example Museum | museum-example | docker auto-assigned private IP | 49154->1812     |
 | Example Cafe   | cafe-example   | docker auto-assigned private IP | 49155->1812     |
 
-The constiuents are each registered by the eSO in Federation Manager as seperate organizations, with 2 SP (hotspot) RADIUS entries. So for Organization `Example City`:
+The constituents are each registered by the eSO in Federation Manager as seperate organizations, with 2 SP (hotspot) RADIUS entries. So for Organization `Example City`:
 
 | SP (hotspot) RADIUS friendly name | IP and port
 |-----------------------------------|---------------|
 | city-example west                 | a.b.c.d:49152 |
 | city-example east                 | w.x.y.z:49152 |
 
-... and for `Example County`:
+... and for `Example Museum`:
 
 | SP (hotspot) RADIUS friendly name | IP and port   |
 |-----------------------------------|---------------|
