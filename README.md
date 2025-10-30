@@ -99,7 +99,7 @@ cd /path/to/freeradius-proxy-container/
 
 vim docker-compose.yml # edit to set container details (refer to comments in file)
 vim custom.env # set the env vars that will drive the container (refer to comments in file or see below)
-# we strongly recommend enabling debug mode in custom.env until you're sure everyting is working
+# we strongly recommend enabling debug mode in custom.env until you're sure everything is working
 
 docker compose up --build -d && docker logs (container name) -f
 ```
