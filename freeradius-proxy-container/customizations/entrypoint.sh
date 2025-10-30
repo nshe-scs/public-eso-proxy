@@ -5,7 +5,7 @@
 # were set for this container.
 
 # If FR_DEBUG is set, we don't want every error to terminate
-if [ -z $FR_DEBUG ]; then
+if [ -z "$FR_DEBUG" ]; then
   echo "Starting with strict error checking..."
   set -e
 else
@@ -186,12 +186,17 @@ fi
 ln -sf ../mods-available/proxy_rate_limit proxy_rate_limit
 
 
-## Cleanup (to avoid orphaning the bg jobs)
+## Cleanup traps (to avoid orphaning bg jobs)
 cleanup() {
   echo "Stopping syslog-ng if running..."
-  kill "$syslog_pid" || true # || true in case something else already reaped it
+  kill "$syslog_pid" 2>/dev/null
 }
-trap cleanup EXIT # i.e. catch SIGINT/SIGTERM/exit and call cleanup()
+term_handler() {
+  echo "Stopping FreeRADIUS cleanly..."
+  kill -TERM "$radiusd_pid" 2>/dev/null
+}
+trap term_handler SIGTERM SIGINT
+trap cleanup EXIT # i.e. call cleanup() when script exits
 
 
 ## Finally, start FreeRADIUS
@@ -200,7 +205,10 @@ echo "Why are we always preparing? Just go!"
 # Note we don't use exec - if we did, our trap would never fire
 if [ -n "$FR_DEBUG" ]; then
   echo "Starting FreeRADIUS in debug mode..."
-  radiusd -X
+  radiusd -X &
+  radiusd_pid=$!
+  wait "$radiusd_pid"
+
   # Wait to be forcefully terminated if we're debugging
   while true; do
    echo "DBG: Sleeping so you can inspect the running container...";
@@ -208,7 +216,9 @@ if [ -n "$FR_DEBUG" ]; then
   done
 else
   echo "Starting FreeRADIUS (to debug, set FR_DEBUG to any value and restart)..."
-  radiusd -f -l stdout
+  radiusd -f -l stdout &
+  radiusd_pid=$! # need pid so we can exit gracefully when container itself is terminated
+  wait "$radiusd_pid"
   ret=$?
 fi
 
