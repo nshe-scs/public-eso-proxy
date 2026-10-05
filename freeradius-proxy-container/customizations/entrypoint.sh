@@ -185,6 +185,9 @@ fi
 ## Enable proxy rate limiting module
 ln -sf ../mods-available/proxy_rate_limit proxy_rate_limit
 
+## Enable session-state cache module
+ln -sf ../mods-available/cache-proxy-session cache_proxy_session
+
 
 ## Cleanup traps (to avoid orphaning bg jobs)
 cleanup() {

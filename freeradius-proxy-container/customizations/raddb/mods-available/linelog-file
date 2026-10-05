@@ -8,7 +8,7 @@
 # Tmp-String-0 is a random correlation ID for the entire session, useful for grepping.
 # Tmp-Integer-0 is the timestamp of the first packet in the outer session (not logged).
 # Tmp-Integer-1 is the total elapsed time of the outer session, in ms.
-# Tmp-Integer-2 is the count of received packets in the outer session.
+# Tmp-Integer-2 is the count of requests in the outer session (Req-Count).
 
 # Sending an Access-Accept
 linelog linelog_send_accept {
@@ -23,7 +23,7 @@ linelog linelog_send_accept {
  NAS-IP-Address=%{NAS-IP-Address},\
  Client-IP-Address=%{Client-IP-Address},\
  Elapsed-Ms=%{session-state:Tmp-Integer-1},\
- Recv-Pkt-Count=%{session-state:Tmp-Integer-2}\
+ Req-Count=%{session-state:Tmp-Integer-2}\
 "
 }
 
@@ -41,7 +41,7 @@ linelog linelog_send_reject {
  Client-IP-Address=%{Client-IP-Address},\
  Module-Failure=\"%{Module-Failure-Message}\",\
  Elapsed-Ms=%{session-state:Tmp-Integer-1},\
- Recv-Pkt-Count=%{session-state:Tmp-Integer-2}\
+ Req-Count=%{session-state:Tmp-Integer-2}\
 "
 }
 

@@ -33,16 +33,19 @@ You will assign a unique shared secret to each constituent for their wireless ge
 Redundant containers for the same constituent on separate hardware can also share the same name; the combination of `public IP`, `port`, and `secret` uniquely identifies your proxy container to the eduroam-US proxies.
 
 ## Container hosting
-We provide a sample `docker-compose.yml` and `custom.env` to help you get started quickly. We test with docker and podman, e.g. using `docker compose` and `podman-compose`. These are the only two files you need to edit.
+We provide `docker-compose.yml.example` and `custom.env.example` to help you get started quickly: copy them to `docker-compose.yml` and `custom.env`, respectively. These are the only two files you need to edit. We test with docker and podman, e.g. using `docker compose` and `podman-compose`. 
 
 You don't need to be a containerization or DevOps expert, but you'll need to understand the very basics of running a container. Ideally two containers on separate hardware and/or locations for redundancy.
 
 This is a fairly small container. You can run it in a Linux VM, rackmount enterprise server hardware, sub-$200 micro-PC, cram it onto a SOHO-grade NAS in your closet or use fancy orchestration in the cloud... whatever is available to you.
 
+### Hosting for a single constituent or self-hosting
+If you are just trying to put a filtering proxy in front of your own eduroam SP-only (i.e. hotspot-only) deployment, the only "special" consideration is that you need a static public IP address. There are no special DNS record requirements, etc. Simply get your public IP, desired UDP port, and FLR secret registered for eduroam via your eSO or NRO (e.g. Internet2), build/run the container, tell your wireless controller/APs to authenticate via the container's IP for your "eduroam" WPA2-Enterprise SSID, and have a nice day.
+
 ### Hosting for multiple constituents - examples
 If you're an eSO, we suggest preparing a single name in DNS like `proxy.roam.(your-eso-domain)`, e.g. `proxy.roam.example.org`, with _one IP per redundant hosting location_ and _one unique port number per constituent_. By using unique containers for each constituent, you ensure their roaming stats aren't co-mingled or aggregated together at the NRO. You also give yourself flexibility for updates and reduce the risk of impacting multiple constituents when testing or changing things down the road.
 
-For example, in the scenario below we an eSO with 2 datacenters / network closets running docker (the container host) on a tiny PC or simple Linux VM. Note that they share a public DNS name resolving to multiple public IPs.
+For example, in the scenario below we have an eSO with 2 datacenters / network closets running docker (the container host) on a tiny PC or simple Linux VM. Note that the container hosts have unique internal DNS names but share a public DNS name resolving to multiple IPs.
 
 | Container host    | Internal DNS name  | Internal IP | Public DNS name / FQDN | Public / NAT IP |
 |-------------------|--------------------|-------------|------------------------|-----------------|
@@ -92,11 +95,13 @@ A successful auth will flow as an encrypted EAP conversation from visitor device
 Malformed auth requests from eduroam visitors such as non-EAP auths and realm-less usernames, and rapidly repeating auth requests from the same client device be rejected quickly by the proxy, saving traffic from your proxy -> FLR -> (back). Such misbehavior is unfortunately normal and often outside the user's control due to default client settings.
 
 # Building and running the container
-Build and run with the supplied `Dockerfile`, `docker-compose.yml`, and `custom.env`. E.g.
+Build and run with the supplied `Dockerfile`, and a `docker-compose.yml` and `custom.env` copied from the supplied examples. E.g.
 
 ```
 cd /path/to/freeradius-proxy-container/
 
+cp docker-compose.yml.example docker-compose.yml
+cp custom.env.example custom.env
 vim docker-compose.yml # edit to set container details (refer to comments in file)
 vim custom.env # set the env vars that will drive the container (refer to comments in file or see below)
 # we strongly recommend enabling debug mode in custom.env until you're sure everything is working
@@ -144,12 +149,28 @@ If you have a remote syslog host or SIEM, take advantage of its collection, sear
 ### File based logging (only use with persistent storage!)
 If you don't have a syslog receiver, the container will log to a file inside the container instead: `/var/log/freeradius/eduroam.log`. You must persistently map / bind this to a local path using your container host's recommended method, otherwise your logs will disappear when your container stops. It's up to you to rotate and trim the log with a tool of your choice from your container host; the container won't do it for you.
 
+Keep logs for at least eduroam's minimum retention period (six months for eduroam-US). For example, in `/etc/logrotate.d/eso-proxy` on the container host (list each container's log, or use a wildcard):
+```
+/path/to/public-eso-proxy/freeradius-proxy-container/vols/log/eduroam.log {
+    daily
+    rotate 190
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}
+```
+`copytruncate` keeps FreeRADIUS writing to the same file; `rotate 190` keeps just over six months. Test it with `logrotate -f /etc/logrotate.d/eso-proxy`; on SELinux hosts, the volume's label may block logrotate.
+
 # Building and updating
 We use the latest official Alpine-based FreeRADIUS container, add the syslog-ng package, and copy our eduroam-US friendly config files over at container build time. We apply actual configuration details during run time. Thus, you can destroy and rebuild the container every day and it will work the same way every time, as long as you feed it the same environmental variables.
 
 The `entrypoint.sh` script does the heavy lifting of turning your env vars into a working config; you don't need to touch FreeRADIUS directly.
 
 If you want to add/modify/delete clients, log settings, etc. once the container is running, just update the container's environment, e.g. via `custom.env`, and restart the container. Don't forget to update your firewall rules if applicable.
+
+To update to the latest release of this project, run `git pull` in your cloned directory and rebuild. `custom.env`, `docker-compose.yml` and `vols/` aren't tracked by git, so a pull leaves them alone, but it never hurts to take a backup! Upgrading from v1.x? Follow the upgrade steps in the v2.0.0 release notes instead.
 
 ## Security updates and considerations
 Security updates take the form of pulling and rebuilding the container image, thereby starting from scratch with the latest patched Alpine + FreeRADIUS; destroying the currently-running container; and starting the new one. For example, you could:
